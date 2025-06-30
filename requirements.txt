@@ -1,0 +1,7 @@
+flask
+flask-cors
+openai
+psycopg2-binary
+pinecone-client
+plotly
+gunicorn
