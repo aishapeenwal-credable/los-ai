@@ -15,8 +15,8 @@ app = Flask(__name__)
 CORS(app)
 
 # Hardcoded API Keys
-OPENAI_API_KEY = "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"
-PINECONE_API_KEY = "pcsk_6EVcM3_7NfQ5yHqWnK66LpJmMszMGvVmeWMpSPNySd1sw2EkJ59S9e7n6iLdcYH8eBTGoa"
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 PINECONE_ENV = "us-east-1"
 PINECONE_INDEX_NAME = "applicationjson"
 
