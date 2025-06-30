@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CredAble Query Interface</title>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .container {
+      width: 90%;
+      max-width: 800px;
+      text-align: center;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 14px;
+    }
+    button {
+      width: 20%;
+      padding: 12px;
+      background-color: #ccc;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: bold;
+    }
+    button:hover {
+      background-color: #e0a800;
+    }
+    .save-btn {
+      background-color: #6c757d;
+      color: white;
+    }
+    .save-btn:hover {
+      background-color: #218838;
+    }
+    .loading {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+    .box {
+      text-align: center;
+      width: 100%;
+      margin-top: 20px;
+    }
+    #vizLoader {
+      font-style: italic;
+      color: #666;
+      margin-top: 10px;
+    }
+    #vizLoader.loading::after {
+      content: '';
+      display: inline-block;
+      margin-left: 10px;
+      width: 16px;
+      height: 16px;
+      border: 2px solid #ccc;
+      border-top: 2px solid #333;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      vertical-align: middle;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <img src="/Credable/images.jpeg" alt="CredAble" width="100" />
+    <h2>Query</h2>
+
+    <input type="text" id="applicationId" placeholder="Enter Application ID..." />
+    <input type="text" id="queryText" placeholder="Enter Query..." />
+    <button id="askButton" onclick="sendQuery()">ASK</button>
+
+    <div class="box">
+      <h3>Response</h3>
+      <textarea id="responseBox" rows="25" readonly></textarea>
+    </div>
+
+    <div class="box" id="visualizationBox">
+      <h3>Visualization</h3>
+      <div id="vizLoader"></div>
+      <div id="vizContainer" style="margin-top: 20px;"></div>
+    </div>
+
+    <div class="box">
+      <h3>Suggestions/Feedback</h3>
+      <textarea id="suggestionBox" rows="5" placeholder="Enter your suggestion or correction..."></textarea>
+      <button id="saveButton" class="save-btn" onclick="saveCorrection()">SAVE</button>
+    </div>
+  </div>
+
+  <script>
+    let latestQueryId = null;
+
+    async function sendQuery() {
+      const applicationId = document.getElementById("applicationId").value.trim();
+      const queryText = document.getElementById("queryText").value.trim();
+      const responseBox = document.getElementById("responseBox");
+      const vizContainer = document.getElementById("vizContainer");
+      const visualizationBox = document.getElementById("visualizationBox");
+      const vizLoader = document.getElementById("vizLoader");
+      const askButton = document.getElementById("askButton");
+
+      if (!applicationId || !queryText) {
+        alert("Please enter both Application ID and Query.");
+        return;
+      }
+
+      askButton.disabled = true;
+      askButton.classList.add("loading");
+      responseBox.value = "Fetching response...";
+      vizContainer.innerHTML = "";
+      vizLoader.textContent = "";
+
+      try {
+        const response = await fetch("http://127.0.0.1:5000/query", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ application_id: applicationId, query: queryText })
+        });
+
+        if (!response.ok) throw new Error(`Server error: ${response.status}`);
+        const data = await response.json();
+        const answer = data.response || "No response received.";
+        responseBox.value = answer;
+        if (data.query_id) latestQueryId = data.query_id;
+
+        // Visualization Step
+        vizLoader.textContent = "Generating visualization...";
+        vizLoader.classList.add("loading");
+
+        const vizResponse = await fetch("http://127.0.0.1:5000/visualise", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ response: answer })
+        });
+
+        const vizData = await vizResponse.json();
+        vizLoader.textContent = "";
+        vizLoader.classList.remove("loading");
+
+        if (vizData.can_visualize && vizData.plotly_instruction) {
+          Plotly.newPlot("vizContainer", vizData.plotly_instruction.data, vizData.plotly_instruction.layout || {});
+        } else {
+          vizContainer.innerHTML = `<p><em>No suitable visualization found.</em></p>`;
+        }
+
+      } catch (error) {
+        responseBox.value = `Error: ${error.message}`;
+        vizLoader.textContent = "";
+        vizLoader.classList.remove("loading");
+        vizContainer.innerHTML = "";
+      } finally {
+        askButton.disabled = false;
+        askButton.classList.remove("loading");
+      }
+    }
+
+    async function saveCorrection() {
+      const correctionText = document.getElementById("suggestionBox").value.trim();
+      const saveButton = document.getElementById("saveButton");
+
+      if (!latestQueryId) {
+        alert("No query has been submitted yet. Please ask a query first.");
+        return;
+      }
+      if (!correctionText) {
+        alert("Please enter a correction.");
+        return;
+      }
+
+      saveButton.disabled = true;
+      saveButton.classList.add("loading");
+
+      try {
+        const response = await fetch("http://127.0.0.1:5000/save_correction", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query_id: latestQueryId, correction: correctionText })
+        });
+
+        const result = await response.json();
+        alert(result.message || "Correction saved successfully.");
+      } catch (error) {
+        alert(`Error: ${error.message}`);
+      } finally {
+        saveButton.disabled = false;
+        saveButton.classList.remove("loading");
+      }
+    }
+  </script>
+</body>
+</html>
