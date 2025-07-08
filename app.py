@@ -16,7 +16,7 @@ CORS(app)
 # === ENVIRONMENT VARIABLES ===
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
-DB_HOST = os.getenv("DB_HOST", "db.diiskfbsryethkjsoobv.supabase.co")
+DB_HOST = os.getenv("DB_HOST", "db.diiskfbsryethkjsoobv.supabase.internal")
 DB_PORT = os.getenv("DB_PORT", "5432")
 DB_USER = os.getenv("DB_USER", "postgres")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "credable@123")  # Ideally set via secrets
