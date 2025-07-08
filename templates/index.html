@@ -3,205 +3,261 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>CredAble Query Interface</title>
+  <title>LOS AI Chat Assistant</title>
   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
   <style>
+    :root {
+      --primary: #000000;
+      --secondary: #f3f4f6;
+      --bg: #ffffff;
+      --text: #1f1f1f;
+      --highlight: #d98e04;
+      --card-bg: #f8f9fa;
+      --radius: 16px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
     body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    header {
+      width: 100%;
+      background-color: var(--primary);
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    header img {
+      height: 50px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 20px;
       display: flex;
       flex-direction: column;
       align-items: center;
     }
-    .container {
-      width: 90%;
-      max-width: 800px;
-      text-align: center;
+
+    h1, h3 {
+      color: var(--primary);
     }
-    input, textarea {
-      width: 100%;
-      padding: 10px;
-      margin: 10px 0;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-      font-size: 14px;
-    }
-    button {
-      width: 20%;
-      padding: 12px;
-      background-color: #ccc;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
+
+    .button {
+      padding: 14px 28px;
+      margin: 10px;
       font-size: 16px;
-      font-weight: bold;
+      font-weight: 600;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: background 0.3s;
     }
-    button:hover {
-      background-color: #e0a800;
-    }
-    .save-btn {
-      background-color: #6c757d;
+
+    .primary {
+      background: var(--primary);
       color: white;
     }
-    .save-btn:hover {
-      background-color: #218838;
+    .primary:hover {
+      background: #333;
     }
-    .loading {
-      background-color: #ccc;
-      cursor: not-allowed;
+
+    .secondary {
+      background: var(--secondary);
+      color: var(--text);
+      border: 1px solid #d1d5db;
     }
-    .box {
-      text-align: center;
+    .secondary:hover {
+      background: #e5e7eb;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      padding: 24px;
+      margin: 16px 0;
       width: 100%;
+      max-width: 700px;
+      transition: transform 0.2s;
+    }
+    .card:hover {
+      transform: translateY(-4px);
+    }
+
+    .flex-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 32px;
+      margin-top: 32px;
+      width: 100%;
+    }
+
+    .summary, .chatbox {
+      flex: 1 1 45%;
+      background: var(--card-bg);
+      padding: 24px;
+      border-radius: var(--radius);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      border-radius: var(--radius);
+      border: 1px solid #e5e7eb;
+      font-size: 14px;
+    }
+
+    #vizContainer {
       margin-top: 20px;
     }
-    #vizLoader {
-      font-style: italic;
-      color: #666;
-      margin-top: 10px;
-    }
-    #vizLoader.loading::after {
-      content: '';
-      display: inline-block;
-      margin-left: 10px;
-      width: 16px;
-      height: 16px;
-      border: 2px solid #ccc;
-      border-top: 2px solid #333;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      vertical-align: middle;
-    }
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
+
+    strong {
+      color: var(--highlight);
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <img src="{{ url_for('static', filename='logo.png') }}" alt="CredAble" width="100" />
-    <h2>Query</h2>
+  <header>
+    <img src="/static/partner-credable-600x600_1.jpg.webp" alt="CredAble Logo">
+  </header>
 
-    <input type="text" id="applicationId" placeholder="Enter Application ID..." />
-    <input type="text" id="queryText" placeholder="Enter Query..." />
-    <button id="askButton" onclick="sendQuery()">ASK</button>
+  <div class="container" id="welcomeScreen">
+    <h1>Welcome to the LOS AI Chat Assistant</h1>
+    <button class="button primary" onclick="showApplications()">View Applications</button>
+    <button class="button secondary">Create New Application</button>
+  </div>
 
-    <div class="box">
-      <h3>Response</h3>
-      <textarea id="responseBox" rows="25" readonly></textarea>
+  <div class="container" id="applicationList" style="display:none;">
+    <div class="card">
+      <h3>M/S Bluten Marketing Private Limited</h3>
+      <p>Status: <strong>Processed</strong></p>
+      <button class="button primary" onclick="openChat('Bluten')">View Application</button>
     </div>
-
-    <div class="box" id="visualizationBox">
-      <h3>Visualization</h3>
-      <div id="vizLoader"></div>
-      <div id="vizContainer" style="margin-top: 20px;"></div>
+    <div class="card">
+      <h3>M/S Esquire Electrovision Private Limited</h3>
+      <p>Status: <strong>Pending</strong></p>
     </div>
+  </div>
 
-    <div class="box">
-      <h3>Suggestions/Feedback</h3>
-      <textarea id="suggestionBox" rows="5" placeholder="Enter your suggestion or correction..."></textarea>
-      <button id="saveButton" class="save-btn" onclick="saveCorrection()">SAVE</button>
+  <div class="container" id="chatInterface" style="display:none;">
+    <div class="flex-container">
+      <div class="summary">
+  <h3 id="companyName">Company Summary</h3>
+  <p><strong>Overall Application Summary:</strong></p>
+  <p><strong>Company Overview:</strong><br>
+  Name: Bluten Marketing Private Limited<br>
+  Registered office: Wadgaon Sheri, Pune, Maharashtra<br>
+  Main activity: Retail Trading (primarily sarees, handlooms, and related textiles)<br>
+  Status: Active, Unlisted, Incorporated on October 1, 2018<br>
+  Banker: HDFC Bank (with significant overdraft facilities)<br>
+  Recent Charges: Hypothecation with HDFC Bank, secured against stocks and receivables, recently increased from ₹3 crore to ₹4.9 crore.</p>
+
+  <p><strong>Directors & Shareholding:</strong><br>
+  Pushkar Shukla (holding majority stake): 92% shares (920,000 equity shares)<br>
+  Akanksha Kanwal: 8% shares (80,000 equity shares)<br>
+  The promoters/directors collectively control the entire equity stake of the company (100%).</p>
+
+  <p><strong>Financial Overview:</strong><br>
+  GST Turnover Performance (selected recent months, explicitly provided data):<br>
+  - Moderate volatility, large fluctuations in monthly sales turnover.<br>
+  - Notable increases year-on-year in July-August 2024; marked declines in September, November, and December 2024.</p>
+
+  <p><strong>Bank Statement Observations:</strong><br>
+  - Frequent and prolonged periods of negative balances (large overdrafts exceeding ₹4 crores regularly).<br>
+  - Heavy reliance on external borrowings (loans noted from Indifi Capital, Ugro Capital).<br>
+  - Modest cash reserves; frequent overdraft utilization hinting at weak liquidity management.<br>
+  - Frequent inflows from online payment gateways (Razorpay), and logistic services (Blue Dart), reflecting a fragmented cash inflow system.</p>
+
+  <p><strong>Financial Statement Highlights (Explicitly Provided):</strong><br>
+  - Total Current Assets (latest available): ₹135.89 million<br>
+  - Total Debt: ₹50.64 million<br>
+  - Net Fixed Assets: Approx. ₹2.02 million<br>
+  - Trade Receivables: ₹48.62 million, Inventories: ₹4.01 million, Cash and Bank: ₹1.66 million<br>
+  - Equity Capital: Recent equity allotment at ₹9.9 million (990,000 shares at ₹10 each), paid-up capital now at ₹10 million.<br>
+  - Auditor’s observations on compliance issues: Noted non-compliance with E-invoicing, GST and E-way bill requirements. Directors have mentioned taking corrective actions.</p>
+
+  <p><strong>Key Financial Red Flags:</strong><br>
+  - Persistent overdraft dependency driving poor liquidity metrics.<br>
+  - High leverage ratio, with recent increase in secured borrowings.<br>
+  - Volatile and unpredictable sales trends with large fluctuations.<br>
+  - Dependence on fragmented online collections.<br>
+  - Auditor flagged issues regarding GST compliance and invoicing processes.</p>
+
+  <p><strong>Conclusion:</strong><br>
+  Bluten Marketing Pvt Ltd, although operating actively in the retail textile segment with a stable promoter-director structure, presents significant financial risks marked by unstable incomes, liquidity constraints, high leverage, and continued operational dependency on overdrafts and external borrowings. Such issues, alongside noted auditor compliance remarks, present considerable underwriting risk factors for lending decisions.</p>
+</div>
+      <div class="chatbox">
+        <h3>Ask a Question</h3>
+        <input type="text" id="queryInput" placeholder="Enter your question here...">
+        <button class="button primary" onclick="sendQuery()">Submit</button>
+        <textarea id="chatResponse" rows="10" readonly></textarea>
+        <div id="vizContainer"></div>
+      </div>
     </div>
   </div>
 
   <script>
-    let latestQueryId = null;
+    window.currentCompany = "";
+
+    function showApplications() {
+      document.getElementById("welcomeScreen").style.display = "none";
+      document.getElementById("applicationList").style.display = "block";
+    }
+
+    function openChat(companyName) {
+      window.currentCompany = companyName;
+      document.getElementById("applicationList").style.display = "none";
+      document.getElementById("chatInterface").style.display = "block";
+      document.getElementById("companyName").textContent = companyName + " Summary";
+    }
 
     async function sendQuery() {
-      const applicationId = document.getElementById("applicationId").value.trim();
-      const queryText = document.getElementById("queryText").value.trim();
-      const responseBox = document.getElementById("responseBox");
+      const input = document.getElementById("queryInput").value.trim();
+      const chatBox = document.getElementById("chatResponse");
       const vizContainer = document.getElementById("vizContainer");
-      const visualizationBox = document.getElementById("visualizationBox");
-      const vizLoader = document.getElementById("vizLoader");
-      const askButton = document.getElementById("askButton");
 
-      if (!applicationId || !queryText) {
-        alert("Please enter both Application ID and Query.");
-        return;
-      }
+      if (!input) return alert("Enter a question.");
 
-      askButton.disabled = true;
-      askButton.classList.add("loading");
-      responseBox.value = "Fetching response...";
+      chatBox.value = "Fetching response...";
       vizContainer.innerHTML = "";
-      vizLoader.textContent = "";
 
       try {
-        const response = await fetch("/query", {
+        const res = await fetch("/query", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ application_id: applicationId, query: queryText })
+          body: JSON.stringify({ application_id: window.currentCompany, query: input })
         });
+        const data = await res.json();
+        chatBox.value = data.response || "No response received.";
 
-        if (!response.ok) throw new Error(`Server error: ${response.status}`);
-        const data = await response.json();
-        const answer = data.response || "No response received.";
-        responseBox.value = answer;
-        if (data.query_id) latestQueryId = data.query_id;
-
-        // Visualization Step
-        vizLoader.textContent = "Generating visualization...";
-        vizLoader.classList.add("loading");
-
-        const vizResponse = await fetch("/visualise", {
+        const vizRes = await fetch("/visualise", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ response: answer })
+          body: JSON.stringify({ response: data.response })
         });
-
-        const vizData = await vizResponse.json();
-        vizLoader.textContent = "";
-        vizLoader.classList.remove("loading");
+        const vizData = await vizRes.json();
 
         if (vizData.can_visualize && vizData.plotly_instruction) {
           Plotly.newPlot("vizContainer", vizData.plotly_instruction.data, vizData.plotly_instruction.layout || {});
         } else {
-          vizContainer.innerHTML = `<p><em>No suitable visualization found.</em></p>`;
+          vizContainer.innerHTML = `<p><em>No visualization available.</em></p>`;
         }
-
-      } catch (error) {
-        responseBox.value = `Error: ${error.message}`;
-        vizLoader.textContent = "";
-        vizLoader.classList.remove("loading");
-        vizContainer.innerHTML = "";
-      } finally {
-        askButton.disabled = false;
-        askButton.classList.remove("loading");
-      }
-    }
-
-    async function saveCorrection() {
-      const correctionText = document.getElementById("suggestionBox").value.trim();
-      const saveButton = document.getElementById("saveButton");
-
-      if (!latestQueryId) {
-        alert("No query has been submitted yet. Please ask a query first.");
-        return;
-      }
-      if (!correctionText) {
-        alert("Please enter a correction.");
-        return;
-      }
-
-      saveButton.disabled = true;
-      saveButton.classList.add("loading");
-
-      try {
-        const response = await fetch("/save_correction", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ query_id: latestQueryId, correction: correctionText })
-        });
-
-        const result = await response.json();
-        alert(result.message || "Correction saved successfully.");
-      } catch (error) {
-        alert(`Error: ${error.message}`);
-      } finally {
-        saveButton.disabled = false;
-        saveButton.classList.remove("loading");
+      } catch (err) {
+        chatBox.value = `Error: ${err.message}`;
       }
     }
   </script>
