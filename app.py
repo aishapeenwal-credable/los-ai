@@ -1,29 +1,24 @@
 import os
 import json
-import psycopg2
-from psycopg2.extras import RealDictCursor
+import requests
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 from openai import OpenAI
 from pinecone import Pinecone, ServerlessSpec
-import plotly.graph_objects as go
 from datetime import datetime
 
-# Initialize Flask
+# === Flask App ===
 app = Flask(__name__)
 CORS(app)
 
-# === ENVIRONMENT VARIABLES ===
+# === ENV VARS ===
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
-DB_HOST = os.getenv("DB_HOST", "db.diiskfbsryethkjsoobv.supabase.internal")
-DB_PORT = os.getenv("DB_PORT", "5432")
-DB_USER = os.getenv("DB_USER", "postgres")
-DB_PASSWORD = os.getenv("DB_PASSWORD", "credable@123")  # Ideally set via secrets
-DB_NAME = os.getenv("DB_NAME", "postgres")
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 PINECONE_INDEX_NAME = "applicationjson"
 
-# === OpenAI & Pinecone Setup ===
+# === Clients ===
 client = OpenAI(api_key=OPENAI_API_KEY)
 pc = Pinecone(api_key=PINECONE_API_KEY)
 
@@ -34,22 +29,7 @@ if PINECONE_INDEX_NAME not in pc.list_indexes().names():
         metric="cosine",
         spec=ServerlessSpec(cloud="aws", region="us-east-1")
     )
-
 pinecone_index = pc.Index(PINECONE_INDEX_NAME)
-
-# === DB Utility ===
-def get_db_connection():
-    try:
-        return psycopg2.connect(
-            host=DB_HOST,
-            port=DB_PORT,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            dbname=DB_NAME
-        )
-    except psycopg2.Error as e:
-        print(f"Error connecting to PostgreSQL: {e}")
-        return None
 
 # === Routes ===
 @app.route("/")
@@ -60,30 +40,6 @@ def index():
 def health():
     return "OK", 200
 
-@app.route("/save_correction", methods=["POST"])
-def save_correction():
-    data = request.get_json()
-    correction_text = data.get("correction", "").strip()
-    query_id = data.get("query_id")
-
-    if not correction_text or not query_id:
-        return jsonify({"error": "Correction text and Query ID required"}), 400
-
-    db_conn = get_db_connection()
-    if not db_conn:
-        return jsonify({"error": "DB connection failed"}), 500
-
-    try:
-        cursor = db_conn.cursor()
-        cursor.execute("UPDATE log_1 SET correction = %s WHERE id = %s;", (correction_text, query_id))
-        db_conn.commit()
-        cursor.close()
-        return jsonify({"message": "Correction saved successfully."})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-    finally:
-        db_conn.close()
-
 @app.route("/query", methods=["POST"])
 def handle_query():
     data = request.get_json()
@@ -93,47 +49,40 @@ def handle_query():
     if not query or not application_id:
         return jsonify({"error": "Missing query or application_id"}), 400
 
-    # Vectorize
+    # Vectorize query
     try:
         embed = client.embeddings.create(model="text-embedding-ada-002", input=query)
         vector = embed.data[0].embedding
     except Exception as e:
         return jsonify({"error": f"OpenAI embedding failed: {str(e)}"}), 500
 
-    # Search Pinecone
+    # Query Pinecone
     try:
         pinecone_results = pinecone_index.query(vector=vector, top_k=50, include_metadata=True).get("matches", [])
     except Exception as e:
         return jsonify({"error": f"Pinecone query failed: {str(e)}"}), 500
 
     context = construct_context(pinecone_results)
-    history_context = build_history(application_id)
+    history_context = fetch_supabase_logs(application_id)
+    response = generate_answer(query, context, history_context)
 
-    # Generate LLM response
-    answer = generate_answer(query, context, history_context)
+    metadata_json = json.dumps({"matched_files": serialize_pinecone_results(pinecone_results)}) if pinecone_results else None
+    inserted = insert_supabase_log(query, application_id, response, metadata_json)
+    query_id = inserted[0]['id'] if inserted else None
 
-    # Store in DB
-    db_conn = get_db_connection()
-    if not db_conn:
-        return jsonify({"error": "DB connection failed"}), 500
-    try:
-        cursor = db_conn.cursor()
-        meta = json.dumps({"matched_files": serialize_pinecone_results(pinecone_results)})
-        cursor.execute("""
-            INSERT INTO log_1 (query, application_id, response, metadata)
-            VALUES (%s, %s, %s, %s);
-        """, (query, application_id, answer, meta))
-        cursor.execute("SELECT LASTVAL();")
-        query_id = cursor.fetchone()[0]
-        db_conn.commit()
-        cursor.close()
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-    finally:
-        db_conn.close()
+    return jsonify({"query": query, "response": response, "query_id": query_id})
 
-    return jsonify({"query": query, "response": answer, "query_id": query_id})
+@app.route("/save_correction", methods=["POST"])
+def save_correction():
+    data = request.get_json()
+    correction = data.get("correction")
+    query_id = data.get("query_id")
 
+    if not correction or not query_id:
+        return jsonify({"error": "Missing correction or query_id"}), 400
+
+    updated = update_supabase_correction(query_id, correction)
+    return jsonify(updated)
 
 @app.route("/visualise", methods=["POST"])
 def visualise_response():
@@ -153,6 +102,7 @@ Can you visualize it? If yes, respond in JSON with:
 Otherwise, respond:
 {{"can_visualize": "NO", "plotly_instruction": {{}}}}
 """
+
     messages = [
         {"role": "system", "content": "You are a visualization assistant."},
         {"role": "user", "content": prompt}
@@ -170,9 +120,50 @@ Otherwise, respond:
         "plotly_instruction": parsed.get("plotly_instruction", {})
     })
 
+# === Supabase REST API ===
+def insert_supabase_log(query, application_id, response, metadata_json):
+    url = f"{SUPABASE_URL}/rest/v1/log_1"
+    headers = {
+        "apikey": SUPABASE_KEY,
+        "Authorization": f"Bearer {SUPABASE_KEY}",
+        "Content-Type": "application/json",
+        "Prefer": "return=representation"
+    }
+    payload = {
+        "query": query,
+        "application_id": application_id,
+        "response": response,
+        "metadata": metadata_json
+    }
+    r = requests.post(url, headers=headers, json=payload)
+    return r.json()
 
-# === Helper Functions ===
+def fetch_supabase_logs(application_id):
+    url = f"{SUPABASE_URL}/rest/v1/log_1?application_id=eq.{application_id}&order=id.desc&limit=5"
+    headers = {
+        "apikey": SUPABASE_KEY,
+        "Authorization": f"Bearer {SUPABASE_KEY}"
+    }
+    r = requests.get(url, headers=headers)
+    if r.status_code != 200:
+        return ""
+    logs = r.json()
+    logs.reverse()
+    return "\n\n".join([f"Q: {log['query']}\nA: {log['response']}" for log in logs])
 
+def update_supabase_correction(query_id, correction):
+    url = f"{SUPABASE_URL}/rest/v1/log_1?id=eq.{query_id}"
+    headers = {
+        "apikey": SUPABASE_KEY,
+        "Authorization": f"Bearer {SUPABASE_KEY}",
+        "Content-Type": "application/json"
+    }
+    r = requests.patch(url, headers=headers, json={"correction": correction})
+    if r.status_code == 204:
+        return {"message": "Correction updated successfully."}
+    return {"error": r.text}
+
+# === Utility Functions ===
 def serialize_pinecone_results(results):
     return [{"id": r.id, "score": r.score, "metadata": r.metadata} for r in results]
 
@@ -185,26 +176,6 @@ def construct_context(results):
         for k, v in meta.items():
             context_lines.append(f"{k.replace('_', ' ').title()}: {v}")
     return "\n".join(context_lines)
-
-def build_history(application_id):
-    db_conn = get_db_connection()
-    if not db_conn:
-        return ""
-
-    try:
-        cursor = db_conn.cursor(cursor_factory=RealDictCursor)
-        cursor.execute("""
-            SELECT query, response FROM log_1
-            WHERE application_id = %s
-            ORDER BY id DESC
-            LIMIT 5
-        """, (application_id,))
-        logs = cursor.fetchall()
-        return "\n\n".join([f"Q: {log['query']}\nA: {log['response']}" for log in logs[::-1]])
-    except Exception as e:
-        return ""
-    finally:
-        db_conn.close()
 
 def generate_answer(query, context, history):
     prompt = f"""
@@ -238,7 +209,7 @@ def chat_completion(messages, model="gpt-4.5-preview", max_tokens=2000):
     except Exception as e:
         return f"LLM error: {e}"
 
-# === Entry Point for Render ===
+# === Entry Point ===
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
