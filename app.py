@@ -198,7 +198,7 @@ Answer:
     ]
     return chat_completion(messages)
 
-def chat_completion(messages, model="gpt-4.5-preview", max_tokens=2000):
+def chat_completion(messages, model="gpt-4.1-nano-2025-04-14", max_tokens=5000):
     try:
         result = client.chat.completions.create(
             model=model,
