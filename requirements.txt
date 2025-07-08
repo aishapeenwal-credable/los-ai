@@ -2,6 +2,6 @@ flask
 flask-cors
 openai
 psycopg2-binary
-pinecone-client
+pinecone>=3.0.0
 plotly
 gunicorn
