@@ -5,14 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>LOS AI Chat Assistant</title>
   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
   <style>
     :root {
-      --primary: #000000;
-      --secondary: #f3f4f6;
-      --bg: #ffffff;
-      --text: #1f1f1f;
+      --primary: #2e2e2e;
+      --secondary: #e4e4e4;
+      --bg: #fbfbfb;
+      --text: #2f2f2f;
       --highlight: #d98e04;
-      --card-bg: #f8f9fa;
+      --card-bg: #f5f5f5;
       --radius: 16px;
     }
 
@@ -23,7 +24,7 @@
     body {
       margin: 0;
       padding: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-family: 'Open Sans', sans-serif;
       background: var(--bg);
       color: var(--text);
     }
@@ -34,11 +35,21 @@
       padding: 10px 20px;
       display: flex;
       align-items: center;
-      justify-content: center;
+      justify-content: space-between;
     }
 
     header img {
       height: 50px;
+    }
+
+    .back-button {
+      color: white;
+      background-color: transparent;
+      border: 1px solid white;
+      padding: 6px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: 'Open Sans', sans-serif;
     }
 
     .container {
@@ -63,6 +74,7 @@
       border-radius: var(--radius);
       cursor: pointer;
       transition: background 0.3s;
+      font-family: 'Open Sans', sans-serif;
     }
 
     .primary {
@@ -70,22 +82,22 @@
       color: white;
     }
     .primary:hover {
-      background: #333;
+      background: #4a4a4a;
     }
 
     .secondary {
       background: var(--secondary);
       color: var(--text);
-      border: 1px solid #d1d5db;
+      border: 1px solid #ccc;
     }
     .secondary:hover {
-      background: #e5e7eb;
+      background: #dddddd;
     }
 
     .card {
       background: var(--card-bg);
       border-radius: var(--radius);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.03);
       padding: 24px;
       margin: 16px 0;
       width: 100%;
@@ -109,7 +121,7 @@
       background: var(--card-bg);
       padding: 24px;
       border-radius: var(--radius);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.03);
     }
 
     input, textarea {
@@ -117,8 +129,9 @@
       padding: 12px;
       margin-top: 10px;
       border-radius: var(--radius);
-      border: 1px solid #e5e7eb;
+      border: 1px solid #dcdcdc;
       font-size: 14px;
+      font-family: 'Open Sans', sans-serif;
     }
 
     #vizContainer {
@@ -128,17 +141,24 @@
     strong {
       color: var(--highlight);
     }
+
+    .loader {
+      font-style: italic;
+      color: #888;
+      font-size: 14px;
+      margin-top: 10px;
+    }
   </style>
 </head>
 <body>
   <header>
-    <img src="/static/partner-credable-600x600_1.jpg.webp" alt="CredAble Logo">
+    <img src="/static/logo.png" alt="CredAble Logo">
+    <button class="back-button" id="backButton" onclick="goHome()" style="display: none;">← Back to Home</button>
   </header>
 
   <div class="container" id="welcomeScreen">
     <h1>Welcome to the LOS AI Chat Assistant</h1>
     <button class="button primary" onclick="showApplications()">View Applications</button>
-    <button class="button secondary">Create New Application</button>
   </div>
 
   <div class="container" id="applicationList" style="display:none;">
@@ -155,51 +175,11 @@
 
   <div class="container" id="chatInterface" style="display:none;">
     <div class="flex-container">
-      <div class="summary">
-  <h3 id="companyName">Company Summary</h3>
-  <p><strong>Overall Application Summary:</strong></p>
-  <p><strong>Company Overview:</strong><br>
-  Name: Bluten Marketing Private Limited<br>
-  Registered office: Wadgaon Sheri, Pune, Maharashtra<br>
-  Main activity: Retail Trading (primarily sarees, handlooms, and related textiles)<br>
-  Status: Active, Unlisted, Incorporated on October 1, 2018<br>
-  Banker: HDFC Bank (with significant overdraft facilities)<br>
-  Recent Charges: Hypothecation with HDFC Bank, secured against stocks and receivables, recently increased from ₹3 crore to ₹4.9 crore.</p>
-
-  <p><strong>Directors & Shareholding:</strong><br>
-  Pushkar Shukla (holding majority stake): 92% shares (920,000 equity shares)<br>
-  Akanksha Kanwal: 8% shares (80,000 equity shares)<br>
-  The promoters/directors collectively control the entire equity stake of the company (100%).</p>
-
-  <p><strong>Financial Overview:</strong><br>
-  GST Turnover Performance (selected recent months, explicitly provided data):<br>
-  - Moderate volatility, large fluctuations in monthly sales turnover.<br>
-  - Notable increases year-on-year in July-August 2024; marked declines in September, November, and December 2024.</p>
-
-  <p><strong>Bank Statement Observations:</strong><br>
-  - Frequent and prolonged periods of negative balances (large overdrafts exceeding ₹4 crores regularly).<br>
-  - Heavy reliance on external borrowings (loans noted from Indifi Capital, Ugro Capital).<br>
-  - Modest cash reserves; frequent overdraft utilization hinting at weak liquidity management.<br>
-  - Frequent inflows from online payment gateways (Razorpay), and logistic services (Blue Dart), reflecting a fragmented cash inflow system.</p>
-
-  <p><strong>Financial Statement Highlights (Explicitly Provided):</strong><br>
-  - Total Current Assets (latest available): ₹135.89 million<br>
-  - Total Debt: ₹50.64 million<br>
-  - Net Fixed Assets: Approx. ₹2.02 million<br>
-  - Trade Receivables: ₹48.62 million, Inventories: ₹4.01 million, Cash and Bank: ₹1.66 million<br>
-  - Equity Capital: Recent equity allotment at ₹9.9 million (990,000 shares at ₹10 each), paid-up capital now at ₹10 million.<br>
-  - Auditor’s observations on compliance issues: Noted non-compliance with E-invoicing, GST and E-way bill requirements. Directors have mentioned taking corrective actions.</p>
-
-  <p><strong>Key Financial Red Flags:</strong><br>
-  - Persistent overdraft dependency driving poor liquidity metrics.<br>
-  - High leverage ratio, with recent increase in secured borrowings.<br>
-  - Volatile and unpredictable sales trends with large fluctuations.<br>
-  - Dependence on fragmented online collections.<br>
-  - Auditor flagged issues regarding GST compliance and invoicing processes.</p>
-
-  <p><strong>Conclusion:</strong><br>
-  Bluten Marketing Pvt Ltd, although operating actively in the retail textile segment with a stable promoter-director structure, presents significant financial risks marked by unstable incomes, liquidity constraints, high leverage, and continued operational dependency on overdrafts and external borrowings. Such issues, alongside noted auditor compliance remarks, present considerable underwriting risk factors for lending decisions.</p>
-</div>
+      <div class="summary" id="summaryBox" style="display:none;">
+        <h3 id="companyName">Company Summary</h3>
+        <div id="loader" class="loader">Loading summary...</div>
+        <div id="summaryContent" style="display:none;"></div>
+      </div>
       <div class="chatbox">
         <h3>Ask a Question</h3>
         <input type="text" id="queryInput" placeholder="Enter your question here...">
@@ -214,15 +194,76 @@
     window.currentCompany = "";
 
     function showApplications() {
+      document.getElementById("backButton").style.display = "none";
       document.getElementById("welcomeScreen").style.display = "none";
       document.getElementById("applicationList").style.display = "block";
     }
 
+    function goHome() {
+      document.getElementById("backButton").style.display = "none";
+      document.getElementById("chatInterface").style.display = "none";
+      document.getElementById("applicationList").style.display = "block";
+    }
+
     function openChat(companyName) {
+      document.getElementById("backButton").style.display = "inline-block";
       window.currentCompany = companyName;
       document.getElementById("applicationList").style.display = "none";
       document.getElementById("chatInterface").style.display = "block";
+      document.getElementById("summaryBox").style.display = "block";
+      document.getElementById("summaryContent").style.display = "none";
+      document.getElementById("loader").style.display = "block";
       document.getElementById("companyName").textContent = companyName + " Summary";
+
+      setTimeout(() => {
+        document.getElementById("summaryContent").innerHTML = `
+          <p><strong>Overall Application Summary:</strong></p>
+          <p><strong>Company Overview:</strong><br>
+          Name: Bluten Marketing Private Limited<br>
+          Registered office: Wadgaon Sheri, Pune, Maharashtra<br>
+          Main activity: Retail Trading (primarily sarees, handlooms, and related textiles)<br>
+          Status: Active, Unlisted, Incorporated on October 1, 2018<br>
+          Banker: HDFC Bank (with significant overdraft facilities)<br>
+          Recent Charges: Hypothecation with HDFC Bank, secured against stocks and receivables, recently increased from ₹3 crore to ₹4.9 crore.</p>
+
+          <p><strong>Directors & Shareholding:</strong><br>
+          - Pushkar Shukla (holding majority stake): 92% shares (920,000 equity shares)<br>
+          - Akanksha Kanwal: 8% shares (80,000 equity shares)<br>
+          - The promoters/directors collectively control the entire equity stake of the company (100%).</p>
+
+          <p><strong>Financial Overview:</strong><br>
+          - Moderate volatility, large fluctuations in monthly sales turnover.<br>
+          - Notable increases year-on-year in July-August 2024; marked declines in September, November, and December 2024.</p>
+
+          <p><strong>Bank Statement Observations:</strong><br>
+          - Frequent and prolonged periods of negative balances (large overdrafts exceeding ₹4 crores regularly).<br>
+          - Heavy reliance on external borrowings (loans noted from Indifi Capital, Ugro Capital).<br>
+          - Modest cash reserves; frequent overdraft utilization hinting at weak liquidity management.<br>
+          - Frequent inflows from online payment gateways (Razorpay), and logistic services (Blue Dart), reflecting a fragmented cash inflow system.</p>
+
+          <p><strong>Financial Statement Highlights:</strong><br>
+          - Total Current Assets: ₹135.89 million<br>
+          - Total Debt: ₹50.64 million<br>
+          - Net Fixed Assets: ₹2.02 million<br>
+          - Trade Receivables: ₹48.62 million<br>
+          - Inventories: ₹4.01 million<br>
+          - Cash and Bank: ₹1.66 million<br>
+          - Equity Capital: ₹10 million (post allotment)<br>
+          - Auditor’s observations: Non-compliance with E-invoicing, GST, and E-way bill; corrective actions promised.</p>
+
+          <p><strong>Key Financial Red Flags:</strong><br>
+          - Persistent overdraft dependency<br>
+          - High leverage ratio<br>
+          - Volatile and unpredictable sales<br>
+          - Fragmented online collections<br>
+          - Auditor-flagged compliance gaps</p>
+
+          <p><strong>Conclusion:</strong><br>
+          Bluten presents significant financial risks marked by unstable incomes, liquidity constraints, high leverage, and continued dependency on borrowings. Auditor concerns add regulatory pressure, increasing underwriting risk.</p>
+        `;
+        document.getElementById("loader").style.display = "none";
+        document.getElementById("summaryContent").style.display = "block";
+      }, 2000);
     }
 
     async function sendQuery() {
