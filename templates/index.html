@@ -148,6 +148,24 @@
       font-size: 14px;
       margin-top: 10px;
     }
+
+    #logsContainer {
+      margin-top: 40px;
+      width: 100%;
+    }
+
+    .log-entry {
+      margin-bottom: 20px;
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 10px;
+    }
+
+    .view-more {
+      color: var(--highlight);
+      cursor: pointer;
+      font-size: 14px;
+      text-decoration: underline;
+    }
   </style>
 </head>
 <body>
@@ -186,6 +204,8 @@
         <button class="button primary" onclick="sendQuery()">Submit</button>
         <textarea id="chatResponse" rows="10" readonly></textarea>
         <div id="vizContainer"></div>
+        <button class="button secondary" onclick="fetchLogs()">Show Logs</button>
+        <div id="logsContainer"></div>
       </div>
     </div>
   </div>
@@ -299,6 +319,23 @@
         }
       } catch (err) {
         chatBox.value = `Error: ${err.message}`;
+      }
+    }
+
+    async function fetchLogs() {
+      const container = document.getElementById("logsContainer");
+      container.innerHTML = "Loading logs...";
+      try {
+        const res = await fetch(`/logs?application_id=${window.currentCompany}`);
+        const logs = await res.json();
+        if (!Array.isArray(logs)) throw new Error("Invalid log format");
+        const paginated = logs.slice(0, 10).map(log => {
+          const firstLine = log.response.split("\n")[0];
+          return `<div class='log-entry'><strong>Q:</strong> ${log.query}<br><strong>A:</strong> <span class='short'>${firstLine}</span><span class='full' style='display:none;'>${log.response}</span><br><span class='view-more' onclick='this.previousElementSibling.style.display="inline"; this.style.display="none";'>View More</span></div>`;
+        }).join("");
+        container.innerHTML = paginated;
+      } catch (err) {
+        container.innerHTML = `Error fetching logs: ${err.message}`;
       }
     }
   </script>
