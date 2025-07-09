@@ -84,19 +84,31 @@ def save_correction():
     updated = update_supabase_correction(query_id, correction)
     return jsonify(updated)
 
-@app.route("/logs")
+@app.route("/logs", methods=["GET"])
 def get_logs():
     application_id = request.args.get("application_id")
     if not application_id:
-        return jsonify({"error": "Missing application_id"}), 400
+        return jsonify([])
 
-    url = f"{SUPABASE_URL}/rest/v1/question_logs?application_id=eq.{application_id}&select=*"
+    supabase_url = os.getenv("SUPABASE_URL")
+    supabase_key = os.getenv("SUPABASE_KEY")
+
+    url = f"{supabase_url}/rest/v1/log_1?application_id=eq.{application_id}&order=created_at.desc&limit=50"
     headers = {
-        "apikey": SUPABASE_KEY,
-        "Authorization": f"Bearer {SUPABASE_KEY}"
+        "apikey": supabase_key,
+        "Authorization": f"Bearer {supabase_key}"
     }
-    res = requests.get(url, headers=headers)
-    return jsonify(res.json())
+
+    try:
+        res = requests.get(url, headers=headers)
+        if res.status_code != 200:
+            return jsonify({"error": "Supabase error", "details": res.text}), 500
+
+        logs = res.json()
+        return jsonify(logs)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 @app.route("/visualise", methods=["POST"])
 def visualise_response():
