@@ -31,7 +31,7 @@
 
     header {
       width: 100%;
-      background-color: #fffff;
+      background-color: #fff;
       padding: 10px 20px;
       display: flex;
       align-items: center;
@@ -49,7 +49,6 @@
       padding: 6px 12px;
       border-radius: 8px;
       cursor: pointer;
-      font-family: 'Open Sans', sans-serif;
     }
 
     .container {
@@ -73,25 +72,17 @@
       border: none;
       border-radius: var(--radius);
       cursor: pointer;
-      transition: background 0.3s;
-      font-family: 'Open Sans', sans-serif;
     }
 
     .primary {
       background: var(--primary);
       color: white;
     }
-    .primary:hover {
-      background: #4a4a4a;
-    }
 
     .secondary {
       background: var(--secondary);
       color: var(--text);
       border: 1px solid #ccc;
-    }
-    .secondary:hover {
-      background: #dddddd;
     }
 
     .card {
@@ -102,10 +93,6 @@
       margin: 16px 0;
       width: 100%;
       max-width: 700px;
-      transition: transform 0.2s;
-    }
-    .card:hover {
-      transform: translateY(-4px);
     }
 
     .flex-container {
@@ -131,15 +118,10 @@
       border-radius: var(--radius);
       border: 1px solid #dcdcdc;
       font-size: 14px;
-      font-family: 'Open Sans', sans-serif;
     }
 
     #vizContainer {
       margin-top: 20px;
-    }
-
-    strong {
-      color: var(--highlight);
     }
 
     .loader {
@@ -149,29 +131,31 @@
       margin-top: 10px;
     }
 
-    #logsContainer {
-      margin-top: 40px;
+    .log-entry {
+      background: var(--card-bg);
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: var(--radius);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
       width: 100%;
     }
 
-    .log-entry {
-      margin-bottom: 20px;
-      border-bottom: 1px solid #ddd;
-      padding-bottom: 10px;
+    .log-entry strong {
+      color: var(--highlight);
     }
 
-    .view-more {
-      color: var(--highlight);
-      cursor: pointer;
-      font-size: 14px;
-      text-decoration: underline;
+    .timestamp {
+      font-size: 12px;
+      color: #888;
+      margin-top: 10px;
+      display: block;
     }
   </style>
 </head>
 <body>
   <header>
     <img src="/static/logo.png" alt="CredAble Logo">
-    <button class="back-button" id="backButton" onclick="goHome()" style="display: none;">← Back to Home</button>
+    <button class="back-button" id="backButton" onclick="goHome()" style="display: none;">← Back</button>
   </header>
 
   <div class="container" id="welcomeScreen">
@@ -205,9 +189,13 @@
         <textarea id="chatResponse" rows="10" readonly></textarea>
         <div id="vizContainer"></div>
         <button class="button secondary" onclick="fetchLogs()">Show Logs</button>
-        <div id="logsContainer"></div>
       </div>
     </div>
+  </div>
+
+  <div class="container" id="logsPage" style="display:none;">
+    <h3>Application Logs</h3>
+    <div id="logsContainer">Loading logs...</div>
   </div>
 
   <script>
@@ -217,17 +205,19 @@
       document.getElementById("backButton").style.display = "none";
       document.getElementById("welcomeScreen").style.display = "none";
       document.getElementById("applicationList").style.display = "block";
+      document.getElementById("chatInterface").style.display = "none";
+      document.getElementById("logsPage").style.display = "none";
     }
 
     function goHome() {
-      document.getElementById("backButton").style.display = "none";
-      document.getElementById("chatInterface").style.display = "none";
-      document.getElementById("applicationList").style.display = "block";
+      document.getElementById("backButton").style.display = "inline-block";
+      document.getElementById("logsPage").style.display = "none";
+      document.getElementById("chatInterface").style.display = "block";
     }
 
     function openChat(companyName) {
-      document.getElementById("backButton").style.display = "inline-block";
       window.currentCompany = companyName;
+      document.getElementById("backButton").style.display = "inline-block";
       document.getElementById("applicationList").style.display = "none";
       document.getElementById("chatInterface").style.display = "block";
       document.getElementById("summaryBox").style.display = "block";
@@ -236,51 +226,7 @@
       document.getElementById("companyName").textContent = companyName + " Summary";
 
       setTimeout(() => {
-        document.getElementById("summaryContent").innerHTML = `
-          <p><strong>Overall Application Summary:</strong></p>
-          <p><strong>Company Overview:</strong><br>
-          Name: Bluten Marketing Private Limited<br>
-          Registered office: Wadgaon Sheri, Pune, Maharashtra<br>
-          Main activity: Retail Trading (primarily sarees, handlooms, and related textiles)<br>
-          Status: Active, Unlisted, Incorporated on October 1, 2018<br>
-          Banker: HDFC Bank (with significant overdraft facilities)<br>
-          Recent Charges: Hypothecation with HDFC Bank, secured against stocks and receivables, recently increased from ₹3 crore to ₹4.9 crore.</p>
-
-          <p><strong>Directors & Shareholding:</strong><br>
-          - Pushkar Shukla (holding majority stake): 92% shares (920,000 equity shares)<br>
-          - Akanksha Kanwal: 8% shares (80,000 equity shares)<br>
-          - The promoters/directors collectively control the entire equity stake of the company (100%).</p>
-
-          <p><strong>Financial Overview:</strong><br>
-          - Moderate volatility, large fluctuations in monthly sales turnover.<br>
-          - Notable increases year-on-year in July-August 2024; marked declines in September, November, and December 2024.</p>
-
-          <p><strong>Bank Statement Observations:</strong><br>
-          - Frequent and prolonged periods of negative balances (large overdrafts exceeding ₹4 crores regularly).<br>
-          - Heavy reliance on external borrowings (loans noted from Indifi Capital, Ugro Capital).<br>
-          - Modest cash reserves; frequent overdraft utilization hinting at weak liquidity management.<br>
-          - Frequent inflows from online payment gateways (Razorpay), and logistic services (Blue Dart), reflecting a fragmented cash inflow system.</p>
-
-          <p><strong>Financial Statement Highlights:</strong><br>
-          - Total Current Assets: ₹135.89 million<br>
-          - Total Debt: ₹50.64 million<br>
-          - Net Fixed Assets: ₹2.02 million<br>
-          - Trade Receivables: ₹48.62 million<br>
-          - Inventories: ₹4.01 million<br>
-          - Cash and Bank: ₹1.66 million<br>
-          - Equity Capital: ₹10 million (post allotment)<br>
-          - Auditor’s observations: Non-compliance with E-invoicing, GST, and E-way bill; corrective actions promised.</p>
-
-          <p><strong>Key Financial Red Flags:</strong><br>
-          - Persistent overdraft dependency<br>
-          - High leverage ratio<br>
-          - Volatile and unpredictable sales<br>
-          - Fragmented online collections<br>
-          - Auditor-flagged compliance gaps</p>
-
-          <p><strong>Conclusion:</strong><br>
-          Bluten presents significant financial risks marked by unstable incomes, liquidity constraints, high leverage, and continued dependency on borrowings. Auditor concerns add regulatory pressure, increasing underwriting risk.</p>
-        `;
+        document.getElementById("summaryContent").innerHTML = `<p><strong>Replace this with your summary content...</strong></p>`;
         document.getElementById("loader").style.display = "none";
         document.getElementById("summaryContent").style.display = "block";
       }, 2000);
@@ -323,17 +269,30 @@
     }
 
     async function fetchLogs() {
+      document.getElementById("chatInterface").style.display = "none";
+      document.getElementById("logsPage").style.display = "block";
+      document.getElementById("backButton").style.display = "inline-block";
       const container = document.getElementById("logsContainer");
       container.innerHTML = "Loading logs...";
+
       try {
         const res = await fetch(`/logs?application_id=${window.currentCompany}`);
         const logs = await res.json();
+
         if (!Array.isArray(logs)) throw new Error("Invalid log format");
-        const paginated = logs.slice(0, 10).map(log => {
-          const firstLine = log.response.split("\n")[0];
-          return `<div class='log-entry'><strong>Q:</strong> ${log.query}<br><strong>A:</strong> <span class='short'>${firstLine}</span><span class='full' style='display:none;'>${log.response}</span><br><span class='view-more' onclick='this.previousElementSibling.style.display="inline"; this.style.display="none";'>View More</span></div>`;
-        }).join("");
-        container.innerHTML = paginated;
+
+        if (logs.length === 0) {
+          container.innerHTML = "<p>No logs found.</p>";
+          return;
+        }
+
+        container.innerHTML = logs.map(log => `
+          <div class="log-entry">
+            <strong>Q:</strong> ${log.query}<br><br>
+            <strong>A:</strong> ${log.response.replace(/\n/g, "<br>")}
+            <span class="timestamp">Time: ${new Date(log.timestamp).toLocaleString()}</span>
+          </div>
+        `).join("");
       } catch (err) {
         container.innerHTML = `Error fetching logs: ${err.message}`;
       }
